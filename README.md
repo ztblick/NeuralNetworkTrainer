@@ -1,0 +1,5 @@
+# NeuralNetworkTrainer: a GPU-Accelerated Application for Neural Network Training
+
+In this project, I will explore the mathematics behind neural networks. I will implement matrix math on my GPU to perform all the calculations necessary to train my own neural network. This will initially be done on a simple dataset — probably the MNIST dataset. My goal is to learn and understand all the internals of the existing Deep Learning libraries like PyTorch and TensorFlow — simply put, I want to understand how they work\!
+
+Once I have a basic model working, I will turn my attention to optimization on my hardware, an NVIDIA RTX 3060 GPU. I intend to optimize the code for the hardware. I have a strong understanding of virtual memory already, so I think the memory management (and the optimizations we can make to speed up the multithreaded training) should be pretty easy to understand and fun to implement\!  
