@@ -1,47 +1,51 @@
 #include "matrix.cuh"
+#include "timer.cuh"
 #include <stdio.h>
-#include <cuda_runtime.h>
+#include <time.h>
 
 int main() {
-    // Test dimensions
-    int M = 12;
-    int K = 8;
-    int N = 10;
+    srand(time(NULL));
     
-    printf("Matrix Multiplication: (%d x %d) * (%d x %d)\n", M, K, K, N);
+    printf("=== Matrix Multiplication Benchmark ===\n");
     
-    // First: create all the matrices
-    float* A = createMatrix(M, K, FILL_RANDOM);
-    float* B = createMatrix(K, N, FILL_RANDOM);
-    float* C = createMatrix(M, N, FILL_ZEROES);
-
-    float* d_A = createCudaMatrix(M, K, FILL_RANDOM);
-    float* d_B = createCudaMatrix(K, N, FILL_RANDOM);
-    float* d_C = createCudaMatrix(M, N, FILL_ZEROES);
+    // Test different sizes
+    int sizes[] = {128, 256, 512, 1024};
+    int num_sizes = 4;
     
-    // Now we will run the CPU version for a benchmark and for correctness
-    printMatrix(A, M, K, "CPU_A");
-    printMatrix(B, K, N, "CPU_B");
-    printMatrix(C, M, N, "CPU_C");
-    matrixMultiplyCPU(A, B, C, M, N, K);
-    printMatrix(C, M, N, "CPU_C");
-
-    // Now we will run the GPU version
-    matrixMultiplyGPU(d_A, d_B, d_C, M, N, K);
-
-    // Let's double-check the results of the GPU test...
-
-    // Let's update performance statistics
-    // TODO
-
-    // Done! Let's free our data and return
-    freeMatrix(A);
-    freeMatrix(B);
-    freeMatrix(C);
-
-    freeCudaMatrix(d_A);
-    freeCudaMatrix(d_B);
-    freeCudaMatrix(d_C);
+    for (int i = 0; i < num_sizes; i++) {
+        int size = sizes[i];
+        
+        printf("\n\n========================================\n");
+        printf("=== Testing Size: %d x %d ===\n", size, size);
+        printf("========================================\n");
+        
+        // Benchmark CPU
+        BenchmarkResult cpu = benchmarkMatrixMultiply(
+            matrixMultiplyCPU,
+            size, size, size,
+            "CPU (Naive)",
+            false
+        );
+        
+        // Benchmark GPU
+        BenchmarkResult gpu = benchmarkMatrixMultiply(
+            matrixMultiplyGPU,
+            size, size, size,
+            "GPU (Naive)",
+            true
+        );
+        
+        // Calculate speedup
+        float speedup = cpu.time_ms / gpu.time_ms;
+        printf("\n>>> Speedup: %.2fx <<<\n", speedup);
+        
+        // Write to CSV
+        writeBenchmarkToFile("benchmark_results.csv", 
+                            size, size, size, cpu, gpu);
+    }
+    
+    printf("\n\n=== Benchmark Complete ===\n");
+    printf("Results saved to benchmark_results.csv\n");
     
     return 0;
 }
