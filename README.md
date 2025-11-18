@@ -4,13 +4,13 @@ In this project, I will explore the mathematics behind neural networks. I will i
 
 Once I have a basic model working, I will turn my attention to optimization on my hardware, an NVIDIA RTX 3060 GPU. I intend to optimize the code for the hardware. I have a strong understanding of virtual memory already, so I think the memory management (and the optimizations we can make to speed up the multithreaded training) should be pretty easy to understand and fun to implement\!
 
-**Phase 1: Matrix Operations** ✅ In Progress
+**Phase 1: Matrix Operations**
 - [x] CPU reference implementation
-- [ ] Naive GPU kernel
+- [x] Naive GPU kernel
 - [ ] Tiled matrix multiplication with shared memory
 - [ ] Performance benchmarking
 
-**Phase 2: Neural Network Operations** ⏳ Coming Soon
+**Phase 2: Neural Network Operations**
 - [ ] ReLU activation
 - [ ] Softmax
 - [ ] Cross-entropy loss
