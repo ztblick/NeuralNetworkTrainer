@@ -14,3 +14,11 @@ Once I have a basic model working, I will turn my attention to optimization on m
 - [ ] ReLU activation
 - [ ] Softmax
 - [ ] Cross-entropy loss
+
+| Test: 1024x1024 \* 1024x1024 |  |  |  |
+| :---- | :---- | :---- | :---- |
+| ***Version*** | ***Runtime (ms)*** | ***Speedup from prev.*** | ***Total Speedup*** |
+| **CPU only** | **2360.013** | **—** | **—** |
+| **Simple GPU kernel** | **3.736**  | **631.72x** | **631.72x** |
+|  |  |  |  |
+|  |  |  |  |
