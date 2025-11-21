@@ -11,7 +11,7 @@ Once I have a basic model working, I will turn my attention to optimization on m
 - [x] Performance benchmarking
 
 **Phase 2: Neural Network Operations**
-- [ ] ReLU activation
+- [x] ReLU activation
 - [ ] Softmax
 - [ ] Cross-entropy loss
 
