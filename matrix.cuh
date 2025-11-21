@@ -1,13 +1,18 @@
 #ifndef MATRIX_CUH
 #define MATRIX_CUH
 
+#include "debug.cuh"
+
 #define FILL_RANDOM true
 #define FILL_ZEROES false
 
-#define THREAD_X    16
-#define THREAD_Y    16
+#define THREAD_X    32
+#define THREAD_Y    8
 
 #define TILE_SIZE   16
+
+#define CPU_TEST    false
+#define GPU_TEST    true
 
 /**
  * Matrix multiplication: C = A * B

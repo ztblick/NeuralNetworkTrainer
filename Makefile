@@ -4,10 +4,10 @@ GPU_ARCH = 86
 PERFORMANCE_FLAGS = -O3 -DNDEBUG -arch=sm_$(GPU_ARCH) -std=c++11
 DEBUG_FLAGS = -g -G -O0 -DDEBUG -arch=sm_$(GPU_ARCH) -std=c++11
 
-TARGET = matrix_test
+TARGET = test_nn
 
-SRCS = main.cu matrix.cu
-HEADERS = matrix.cuh debug.cuh timer.cuh
+SRCS = main.cu matrix.cu activations.cu
+HEADERS = matrix.cuh debug.cuh timer.cuh activations.cuh
 
 all: $(TARGET)
 

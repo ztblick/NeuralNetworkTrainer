@@ -1,22 +1,24 @@
 #include "matrix.cuh"
+#include "activations.cuh"
 #include "timer.cuh"
 #include <stdio.h>
 #include <time.h>
 
-int main() {
+void test_gemm() {
     srand(time(NULL));
     
     printf("=== Matrix Multiplication Benchmark ===\n");
     
     // Test different sizes
-    int sizes[] = {512, 1024, 2048};
-    int num_sizes = 3;
+    int sizes[] = {512, 1024, 2048, 4096};
+    int num_sizes = 4;
+    ASSERT(sizes[num_sizes] > 0);
     
     for (int i = 0; i < num_sizes; i++) {
         int size = sizes[i];
         
         printf("\n\n========================================\n");
-        printf("=== Testing Size: %d x %d ===\n", size, size);
+        printf("=== Testing Size: [%d x %d] ===\n", size, size);
         printf("========================================\n");
         
         // Benchmark GPU
@@ -24,7 +26,7 @@ int main() {
             matrixMultiplyGPU,
             size, size, size,
             "GPU (Naive)",
-            true
+            GPU_TEST
         );
 
         
@@ -33,7 +35,7 @@ int main() {
             tiledMatrixMultiplyGPU,
             size, size, size,
             "GPU (Tiled)",
-            true
+            GPU_TEST
         );
 
         
@@ -42,8 +44,41 @@ int main() {
         printf("\n>>> Speedup: %.2fx <<<\n", speedup);
     }
     
-    printf("\n\n=== Benchmark Complete ===\n");
-    printf("Results saved to benchmark_results.csv\n");
+    printf("\n\n=== Benchmark Complete ===\n");    
+}
+
+void test_relu() {
+    int size = 1e3;
+    float* data;
     
-    return 0;
+    cudaMallocManaged(&data, size * sizeof(float));
+    
+    // Initialize with some negative and positive values
+    for (int i = 0; i < size; i++) {
+        data[i] = i - size/2;  // [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
+    }
+    
+    printf("Before ReLU:\n");
+    for (int i = 0; i < size; i++) {
+        printf("%.1f ", data[i]);
+    }
+    printf("\n");
+    
+    // Apply ReLU
+    relu(data, size);
+    
+    printf("After ReLU:\n");
+    for (int i = 0; i < size; i++) {
+        printf("%.1f ", data[i]);
+    }
+    printf("\n");
+    
+    // Expected: [0, 0, 0, 0, 0, 0, 1, 2, 3, 4]
+    
+    cudaFree(data);
+}
+
+int main() {
+    // test_gemm();
+    test_relu();
 }

@@ -91,7 +91,7 @@ __global__ void tiledMatrixMultiplyKernel(const float* A, const float* B, float*
 }
 
 // GPU Tiled wrapper function
-void tiledMatrixMultiplyGPU(const float* d_A, const float* d_B, float* d_C,
+void tiledMatrixMultiplyGPU(const float* A, const float* B, float* C,
                        int M, int N, int K) {
 
     // Define block dimensions and grid dimensions                        
@@ -102,12 +102,12 @@ void tiledMatrixMultiplyGPU(const float* d_A, const float* d_B, float* d_C,
                 (M + TILE_SIZE - 1) / TILE_SIZE);
     
     // Toggle these on and off to test performance
-    cudaMemPrefetchAsync(d_A, M*K*sizeof(float), 0, 0);
-    cudaMemPrefetchAsync(d_B, K*N*sizeof(float), 0, 0);
-    cudaMemPrefetchAsync(d_C, M*N*sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(A, M*K*sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(B, K*N*sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(C, M*N*sizeof(float), 0, 0);
 
     // Launch our kernel!
-    tiledMatrixMultiplyKernel<<<blocks, threads>>>(d_A, d_B, d_C, M, N, K);
+    tiledMatrixMultiplyKernel<<<blocks, threads>>>(A, B, C, M, N, K);
 
     cudaDeviceSynchronize();
 }
@@ -140,9 +140,9 @@ void matrixMultiplyGPU(const float* d_A, const float* d_B, float* d_C,
                 (M + THREAD_Y - 1) / THREAD_Y);
     
     // Toggle these on and off to test performance
-    cudaMemPrefetchAsync(d_A, M*K*sizeof(float), 0, 0);
-    cudaMemPrefetchAsync(d_B, K*N*sizeof(float), 0, 0);
-    cudaMemPrefetchAsync(d_C, M*N*sizeof(float), 0, 0);
+    // cudaMemPrefetchAsync(d_A, M*K*sizeof(float), 0, 0);
+    // cudaMemPrefetchAsync(d_B, K*N*sizeof(float), 0, 0);
+    // cudaMemPrefetchAsync(d_C, M*N*sizeof(float), 0, 0);
 
     // Launch our kernel!
     matrixMultiplyKernel<<<blocks, threads>>>(d_A, d_B, d_C, M, N, K);
@@ -224,22 +224,16 @@ void printMatrix(const float* matrix, int rows, int cols, const char* name) {
 
 
 // Benchmarking and timing code from Claude
-
 BenchmarkResult benchmarkMatrixMultiply(
     void (*func)(const float*, const float*, float*, int, int, int),
                 int M, int N, int K,
                 const char* name,
                 bool is_gpu) {
-    // Allocate matrices
-    float *A, *B, *C;
-    cudaMallocManaged(&A, M * K * sizeof(float));
-    cudaMallocManaged(&B, K * N * sizeof(float));
-    cudaMallocManaged(&C, M * N * sizeof(float));
-    
-    // Initialize using your functions
-    fillMatrixRandom(A, M, K);
-    fillMatrixRandom(B, K, N);
-    fillMatrixZeros(C, M, N);
+
+    // Allocate matrices & fill them with initial values
+    float *A = createCudaMatrix(M, K, FILL_RANDOM);
+    float *B = createCudaMatrix(K, N, FILL_RANDOM);
+    float *C = createCudaMatrix(M, N, FILL_ZEROES);
     
     // Warmup run
     func(A, B, C, M, N, K);
@@ -284,10 +278,10 @@ BenchmarkResult benchmarkMatrixMultiply(
     printf("  Bandwidth: %.2f GB/s\n", bandwidth);
     
     // Cleanup
-    cudaFree(A);
-    cudaFree(B);
-    cudaFree(C);
-    
+    freeCudaMatrix(A);
+    freeCudaMatrix(B);
+    freeCudaMatrix(C);
+
     BenchmarkResult result = {avg_time, gflops, bandwidth};
     return result;
 }
