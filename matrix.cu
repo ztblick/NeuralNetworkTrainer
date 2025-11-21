@@ -31,6 +31,87 @@ void matrixMultiplyCPU(const float* A, const float* B, float* C,
     }
 }
 
+__global__ void tiledMatrixMultiplyKernel(const float* A, const float* B, float* C,
+                                     int M, int N, int K) {
+
+    // Allocate shared memory for tiles
+    __shared__ float tileA[TILE_SIZE][TILE_SIZE];
+    __shared__ float tileB[TILE_SIZE][TILE_SIZE];
+
+    // Thread indices within block
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+    
+    // Global row and column this thread computes
+    int row = blockIdx.y * TILE_SIZE + ty;
+    int col = blockIdx.x * TILE_SIZE + tx;
+    
+    float sum = 0.0f;
+
+    // Find the number of tiles we need to load for each full row/col multiplication operation
+    int num_tiles = (K + TILE_SIZE - 1) / TILE_SIZE;
+
+    // Add the relevant components from each tile to the entire sum
+    for (int tile = 0; tile < num_tiles; tile++) {
+
+        // Here, we will load each value in the tile from A
+        // This is split across ALL threads, so each thread adds one value
+        int aCol = tile * TILE_SIZE + tx;
+        if (row < M && aCol < K) {
+            tileA[ty][tx] = A[row * K + aCol];
+        } else {
+            tileA[ty][tx] = 0.0f;  // Padding for boundary
+        }
+
+        // We do the same for B
+        int bRow = tile * TILE_SIZE + ty;
+        if (bRow < K && col < N) {
+            tileB[ty][tx] = B[bRow * N + col];
+        } else {
+            tileB[ty][tx] = 0.0f;  // Padding for boundary
+        }
+
+        // Wait for all threads to finish loading
+        __syncthreads();
+
+        // Now that we've loaded the tile into shared memory, each thread will calculate their
+        // chunk of their sum
+        for (int idx = 0; idx < TILE_SIZE; idx++)
+            sum += tileA[ty][idx] * tileB[idx][tx];
+
+        // Wait for all threads to finish multiplying, then move on to the next tile!
+        __syncthreads();
+    }
+
+
+    // Finally, insert the sum to our resulting matrix!
+    if (row < M && col < N) {
+        C[row * N + col] = sum;
+    }
+}
+
+// GPU Tiled wrapper function
+void tiledMatrixMultiplyGPU(const float* d_A, const float* d_B, float* d_C,
+                       int M, int N, int K) {
+
+    // Define block dimensions and grid dimensions                        
+    dim3 threads(TILE_SIZE, TILE_SIZE);
+
+    // Here, we ensure that we will not have too few blocks in our grid.
+    dim3 blocks((N + TILE_SIZE - 1) / TILE_SIZE,
+                (M + TILE_SIZE - 1) / TILE_SIZE);
+    
+    // Toggle these on and off to test performance
+    cudaMemPrefetchAsync(d_A, M*K*sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(d_B, K*N*sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(d_C, M*N*sizeof(float), 0, 0);
+
+    // Launch our kernel!
+    tiledMatrixMultiplyKernel<<<blocks, threads>>>(d_A, d_B, d_C, M, N, K);
+
+    cudaDeviceSynchronize();
+}
+
 // Naive GPU kernel
 __global__ void matrixMultiplyKernel(const float* A, const float* B, float* C,
                                      int M, int N, int K) {
@@ -59,9 +140,9 @@ void matrixMultiplyGPU(const float* d_A, const float* d_B, float* d_C,
                 (M + THREAD_Y - 1) / THREAD_Y);
     
     // Toggle these on and off to test performance
-    // cudaMemPrefetchAsync(d_A, M*K*sizeof(float), 0, 0);
-    // cudaMemPrefetchAsync(d_B, K*N*sizeof(float), 0, 0);
-    // cudaMemPrefetchAsync(d_C, M*N*sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(d_A, M*K*sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(d_B, K*N*sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(d_C, M*N*sizeof(float), 0, 0);
 
     // Launch our kernel!
     matrixMultiplyKernel<<<blocks, threads>>>(d_A, d_B, d_C, M, N, K);
@@ -197,7 +278,7 @@ BenchmarkResult benchmarkMatrixMultiply(
     float bandwidth = (bytes_accessed / avg_time) / 1e6;
     
     printf("\n%s Performance:\n", name);
-    printf("  Matrix size: %dx%d * %dx%d\n", M, K, K, N);
+    printf("  Matrix size: [ %d x %d ] * [ %d x %d ]\n", M, K, K, N);
     printf("  Time: %.3f ms\n", avg_time);
     printf("  GFLOPS: %.2f\n", gflops);
     printf("  Bandwidth: %.2f GB/s\n", bandwidth);
@@ -209,32 +290,4 @@ BenchmarkResult benchmarkMatrixMultiply(
     
     BenchmarkResult result = {avg_time, gflops, bandwidth};
     return result;
-}
-
-void writeBenchmarkToFile(const char* filename,
-                          int M, int N, int K,
-                          BenchmarkResult cpu_result,
-                          BenchmarkResult gpu_result) {
-    FILE* f = fopen(filename, "a");
-    if (!f) {
-        fprintf(stderr, "Failed to open %s\n", filename);
-        return;
-    }
-    
-    // Write header if file is empty
-    fseek(f, 0, SEEK_END);
-    if (ftell(f) == 0) {
-        fprintf(f, "M,N,K,CPU_ms,CPU_GFLOPS,GPU_ms,GPU_GFLOPS,Speedup\n");
-    }
-    
-    float speedup = cpu_result.time_ms / gpu_result.time_ms;
-    
-    fprintf(f, "%d,%d,%d,%.3f,%.2f,%.3f,%.2f,%.2fx\n",
-            M, N, K,
-            cpu_result.time_ms, cpu_result.gflops,
-            gpu_result.time_ms, gpu_result.gflops,
-            speedup);
-    
-    fclose(f);
-    printf("Results written to %s\n", filename);
 }

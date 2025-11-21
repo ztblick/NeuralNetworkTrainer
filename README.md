@@ -7,8 +7,8 @@ Once I have a basic model working, I will turn my attention to optimization on m
 **Phase 1: Matrix Operations**
 - [x] CPU reference implementation
 - [x] Naive GPU kernel
-- [ ] Tiled matrix multiplication with shared memory
-- [ ] Performance benchmarking
+- [x] Tiled matrix multiplication with shared memory
+- [x] Performance benchmarking
 
 **Phase 2: Neural Network Operations**
 - [ ] ReLU activation
@@ -20,5 +20,5 @@ Once I have a basic model working, I will turn my attention to optimization on m
 | ***Version*** | ***Runtime (ms)*** | ***Speedup from prev.*** | ***Total Speedup*** |
 | **CPU only** | **2360.013** | **—** | **—** |
 | **Simple GPU kernel** | **3.736**  | **631.72x** | **631.72x** |
-|  |  |  |  |
+| **Tiled GPU kernel** | **2.512**  | **1.27x** | **939.5x** |
 |  |  |  |  |

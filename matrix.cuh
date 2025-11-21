@@ -7,6 +7,8 @@
 #define THREAD_X    16
 #define THREAD_Y    16
 
+#define TILE_SIZE   16
+
 /**
  * Matrix multiplication: C = A * B
  * 
@@ -31,6 +33,9 @@ void matrixMultiplyCPU(const float* A, const float* B, float* C,
 
 void matrixMultiplyGPU(const float* d_A, const float* d_B, float* d_C,
                        int M, int N, int K);
+
+void tiledMatrixMultiplyGPU(const float* d_A, const float* d_B, float* d_C,
+                        int M, int N, int K);
 
 // Helper to allocate and initialize matrices
 float* createMatrix(int rows, int cols, bool random);

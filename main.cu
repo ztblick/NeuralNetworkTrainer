@@ -9,8 +9,8 @@ int main() {
     printf("=== Matrix Multiplication Benchmark ===\n");
     
     // Test different sizes
-    int sizes[] = {128, 256, 512, 1024};
-    int num_sizes = 4;
+    int sizes[] = {512, 1024, 2048};
+    int num_sizes = 3;
     
     for (int i = 0; i < num_sizes; i++) {
         int size = sizes[i];
@@ -19,14 +19,6 @@ int main() {
         printf("=== Testing Size: %d x %d ===\n", size, size);
         printf("========================================\n");
         
-        // Benchmark CPU
-        BenchmarkResult cpu = benchmarkMatrixMultiply(
-            matrixMultiplyCPU,
-            size, size, size,
-            "CPU (Naive)",
-            false
-        );
-        
         // Benchmark GPU
         BenchmarkResult gpu = benchmarkMatrixMultiply(
             matrixMultiplyGPU,
@@ -34,14 +26,20 @@ int main() {
             "GPU (Naive)",
             true
         );
+
+        
+        // Benchmark GPU Tiled
+        BenchmarkResult gpu_tiled = benchmarkMatrixMultiply(
+            tiledMatrixMultiplyGPU,
+            size, size, size,
+            "GPU (Tiled)",
+            true
+        );
+
         
         // Calculate speedup
-        float speedup = cpu.time_ms / gpu.time_ms;
+        float speedup = gpu.time_ms / gpu_tiled.time_ms;
         printf("\n>>> Speedup: %.2fx <<<\n", speedup);
-        
-        // Write to CSV
-        writeBenchmarkToFile("benchmark_results.csv", 
-                            size, size, size, cpu, gpu);
     }
     
     printf("\n\n=== Benchmark Complete ===\n");
