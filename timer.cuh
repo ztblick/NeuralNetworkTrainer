@@ -3,6 +3,7 @@
 
 #include <cuda_runtime.h>
 #include <stdio.h>
+#include <time.h>
 
 // CPU timer
 class CPUTimer {

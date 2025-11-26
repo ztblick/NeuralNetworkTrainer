@@ -1,8 +1,9 @@
-#ifndef DEBUG_CUH
-#define DEBUG_CUH
+#ifndef DEBUG_H
+#define DEBUG_H
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstddef>
 
 #ifdef NDEBUG
     #define ASSERT(condition) ((void)0)
@@ -19,4 +20,4 @@
         } while(0)
 #endif
 
-#endif // DEBUG_CUH
+#endif // DEBUG_H

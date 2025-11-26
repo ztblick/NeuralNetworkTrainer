@@ -1,9 +1,14 @@
 #ifndef ACTIVATIONS_CUH
 #define ACTIVATIONS_CUH
 
-// Apply ReLU activation to array in-place
-void relu(float* data, int size);
+#include "Matrix.h"
 
-// TODO: Add softmax later
+// Wrapper function: applies ReLU activation kernel to the data for the given layer.
+void relu(
+    const Matrix& input
+);
+
+
+void test_relu();
 
 #endif // ACTIVATIONS_CUH
