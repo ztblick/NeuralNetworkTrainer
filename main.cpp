@@ -1,4 +1,4 @@
-#include "activations.cuh"
+#include "activationKernels.cuh"
 #include "ReLULayer.h"
 #include <vector>
 
@@ -56,7 +56,35 @@ int run_neural_network() {
     return 0;
 }
 
+
+void test_relu() {
+    int size = 1e3;
+    Matrix input(size / 10, 10);
+    
+    // Initialize with some negative and positive values
+    for (int i = 0; i < input.size; i++) {
+        input.data[i] = i - size/2;
+    }
+    
+    printf("Before ReLU:\n");
+    for (int i = 0; i < size; i++) {
+        printf("%.1f ", input.data[i]);
+    }
+    printf("\n");
+    
+    // Apply ReLU
+    Layer* l = new ReLULayer(BATCH_SIZE, 128);
+    l->forward(input);
+    const Matrix& output = l->getOutput();
+
+    printf("After ReLU:\n");
+    for (int i = 0; i < size; i++) {
+        printf("%.1f ", output.data[i]);
+    }
+    printf("\n");
+}
+
 int main() {
-    test_gemm();
-    // test_relu();
+    // test_gemm();
+    test_relu();
 }

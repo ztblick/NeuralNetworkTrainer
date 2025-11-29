@@ -5,11 +5,13 @@
 class ReLULayer : public Layer {
 private:
     size_t input_size;
+    Matrix d_output;
     
 public:
     ReLULayer(size_t batch_size, size_t input_size);
-    ~ReLULayer();
+    // ~ReLULayer();   // Matrix destructor handles cleanup
     
-    void forward(const float* d_input) override;
-    void backward(const float* d_grad_output, float* d_grad_input) override;
+    void forward(const Matrix& d_input) override;
+    void backward(const Matrix& d_grad_output, Matrix& d_grad_input) override;
+    const Matrix& getOutput() const override;
 };

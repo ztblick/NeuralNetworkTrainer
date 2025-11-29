@@ -6,8 +6,8 @@ DEBUG_FLAGS = -g -G -O0 -DDEBUG -arch=sm_$(GPU_ARCH) -std=c++11
 
 TARGET = test_nn
 
-SRCS = activations.cu main.cpp Matrix.cpp MatrixKernels.cu ReLUKernels.cu ReLULayer.cpp 
-HEADERS = activations.cuh config.h debug.h Layer.h Matrix.h MatrixKernels.cuh ReLUKernels.cuh ReLULayer.h timer.cuh
+SRCS = activationKernels.cu main.cpp Matrix.cpp MatrixKernels.cu ReLULayer.cpp 
+HEADERS = activationKernels.cuh config.h debug.h Layer.h Matrix.h MatrixKernels.cuh  ReLULayer.h timer.cuh
 
 all: $(TARGET)
 
