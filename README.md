@@ -12,8 +12,17 @@ Once I have a basic model working, I will turn my attention to optimization on m
 
 **Phase 2: Neural Network Operations**
 - [x] ReLU activation
-- [ ] Softmax
-- [ ] Cross-entropy loss
+- [x] Softmax
+- [x] Cross-entropy loss
+
+**Phase 3: Forward-Passing Netword**
+- [x] Abstract Layer class
+- [ ] Dense Layers
+- [ ] Passing data through all layers from input to output
+
+**Phase 4: Backpropagation**
+
+**Phase 5: Training and Testing with MNIST Data**
 
 | Test: 1024x1024 \* 1024x1024 |  |  |  |
 | :---- | :---- | :---- | :---- |
