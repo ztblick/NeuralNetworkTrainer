@@ -1,7 +1,16 @@
 #include "activationKernels.cuh"
 #include "ReLULayer.h"
+#include "OutputLayer.h"
 #include <vector>
 #include <cuda_runtime.h>
+#include <cmath>
+
+void setup_batch_labels(int batch_size) {
+    int h_labels[batch_size] = {0};  // TODO -- add MNIST labels for this test
+    int* d_labels;
+    cudaMalloc(&d_labels, batch_size * sizeof(int));
+    cudaMemcpy(d_labels, h_labels, batch_size * sizeof(int), cudaMemcpyHostToDevice);
+}
 
 int run_neural_network() {
     // --- SETUP ---    
@@ -60,13 +69,6 @@ int run_neural_network() {
     return 0;
 }
 
-void setup_batch_labels(int batch_size) {
-    int h_labels[batch_size] = {0};  // TODO -- add MNIST labels for this test
-    int* d_labels;
-    cudaMalloc(&d_labels, batch_size * sizeof(int));
-    cudaMemcpy(d_labels, h_labels, batch_size * sizeof(int), cudaMemcpyHostToDevice);
-}
-
 
 void test_relu() {
     int size = 1e3;
@@ -95,7 +97,102 @@ void test_relu() {
     printf("\n");
 }
 
+void test_output_layer() {
+    printf("\n=== Testing Output Layer ===\n");
+    
+    // Simple case: 1 sample, 3 classes
+    size_t batch_size = 1;
+    size_t num_classes = 3;
+    
+    // Create logits: [2.0, 1.0, 0.1]
+    float h_logits[] = {2.0f, 1.0f, 0.1f};
+    int h_true_class[] = {0};  // True class is index 0
+    
+    // Create input matrix and copy logits
+    Matrix d_input(batch_size, num_classes);
+    cudaMemcpy(d_input.data, h_logits, num_classes * sizeof(float), cudaMemcpyHostToDevice);
+    
+    // Create true class labels on device
+    int* d_true_classes;
+    cudaMallocManaged(&d_true_classes, batch_size * sizeof(int));
+    cudaMemcpy(d_true_classes, h_true_class, batch_size * sizeof(int), cudaMemcpyHostToDevice);
+    
+    // Create output layer
+    OutputLayer output_layer(batch_size, num_classes);
+    
+    // Run forward pass
+    output_layer.forward_with_labels(d_input, d_true_classes);
+    cudaDeviceSynchronize();
+    
+    // Get results
+    const Matrix& d_output = output_layer.getOutput();
+    float* d_loss = output_layer.getLoss();  // You'll need to add a getter or make it public
+    
+    // Copy results to host
+    float h_gradients[3];
+    float h_loss;
+    cudaMemcpy(h_gradients, d_output.data, num_classes * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&h_loss, d_loss, sizeof(float), cudaMemcpyDeviceToHost);
+    
+    // Compute expected values
+    float max_logit = 2.0f;
+    float exp_vals[3] = {
+        expf(2.0f - 2.0f),  // = 1.0
+        expf(1.0f - 2.0f),  // = 0.368
+        expf(0.1f - 2.0f)   // = 0.150
+    };
+    float sum = exp_vals[0] + exp_vals[1] + exp_vals[2];  // = 1.518
+    
+    float expected_probs[3] = {
+        exp_vals[0] / sum,  // = 0.659
+        exp_vals[1] / sum,  // = 0.242
+        exp_vals[2] / sum   // = 0.099
+    };
+    
+    float expected_gradients[3] = {
+        expected_probs[0] - 1.0f,  // True class gets -1
+        expected_probs[1] - 0.0f,
+        expected_probs[2] - 0.0f
+    };
+    
+    float expected_loss = -logf(expected_probs[0]);
+    
+    // Print results
+    printf("Logits: [%.1f, %.1f, %.1f]\n", h_logits[0], h_logits[1], h_logits[2]);
+    printf("Expected probs: [%.3f, %.3f, %.3f] (sum=%.3f)\n", 
+           expected_probs[0], expected_probs[1], expected_probs[2],
+           expected_probs[0] + expected_probs[1] + expected_probs[2]);
+    printf("Actual gradients: [%.3f, %.3f, %.3f]\n", 
+           h_gradients[0], h_gradients[1], h_gradients[2]);
+    printf("Expected gradients: [%.3f, %.3f, %.3f]\n",
+           expected_gradients[0], expected_gradients[1], expected_gradients[2]);
+    printf("Expected loss: %.3f\n", expected_loss);
+    printf("Actual loss: %.3f\n", h_loss);
+    
+    // Verify
+    float tolerance = 1e-4;
+    bool passed = true;
+    for (int i = 0; i < 3; i++) {
+        if (fabsf(h_gradients[i] - expected_gradients[i]) > tolerance) {
+            printf("ERROR: Gradient mismatch at index %d\n", i);
+            passed = false;
+        }
+    }
+    if (fabsf(h_loss - expected_loss) > tolerance) {
+        printf("ERROR: Loss mismatch\n");
+        passed = false;
+    }
+    
+    if (passed) {
+        printf("✓ Test passed!\n");
+    }
+    
+    // Cleanup
+    cudaFree(d_true_classes);
+}
+
 int main() {
     // test_gemm();
-    test_relu();
+    // test_relu();
+    test_output_layer();
 }

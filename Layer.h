@@ -4,9 +4,6 @@
 #include <cstddef>
 
 class Layer {
-protected:
-    size_t batch_size;
-    
 public:
     virtual ~Layer() = default;
     virtual void forward(const Matrix& input) = 0;

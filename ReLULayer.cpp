@@ -5,10 +5,8 @@
 
 ReLULayer::ReLULayer(size_t batch_size, size_t input_size)
     : d_output(batch_size * input_size, 1),  // Initialize in initializer list
-      input_size(input_size) {
-
-    this->batch_size = batch_size;
-}
+      input_size(input_size),
+      batch_size(batch_size) {}
 
 // Define the destructor -- Matrix destructor handles cleanup
 // ReLULayer::~ReLULayer() = default;

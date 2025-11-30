@@ -4,6 +4,7 @@
 
 class ReLULayer : public Layer {
 private:
+    size_t batch_size;
     size_t input_size;
     Matrix d_output;
     

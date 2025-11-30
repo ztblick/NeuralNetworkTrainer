@@ -67,53 +67,100 @@ __global__ void softmax_cross_entropy_kernel(   const float* input,      // [bat
     // Implement softmax + gradient computation         //
     // ================================================ //
 
-    // Step 1: Find max (reduction)
-    // This will access the two floats of memory that is shared between all threads in this block!
-    extern __shared__ float shared[];
-    float* s_max = &shared[0];
-    float* s_sum = &shared[1];
-
-    // key idea: each thread compares the its two values, then writes the max to its base index
-    // Then the next thread will use that value in its next comparison
-    // And the final max value will be written by thread 0 into shared
     int tid = threadIdx.x;
-    for (unsigned int s=blockDim.x/2; s>0; s>>=1) {
+    int num_threads = blockDim.x;
+    const float* sample_input = input + sample_idx * num_classes;
+    float* sample_output = output + sample_idx * num_classes;
+    int true_class = true_classes[sample_idx];
+
+    // ===== Step 1: Find max logit =====
+
+    // First, we will do a grid-stride loop
+    // For MNIST, this doesn't really make sense, as we have only 10 classes.
+    // But this will allow us to expand later on.
+    float thread_max = -INFINITY;
+    for (int i = tid; i < num_classes; i += num_threads) {
+        thread_max = fmaxf(thread_max, sample_input[i]);
+    }
+
+    // Now, we will read these local maximums into shared data, then do a parallel reduction on it.
+    // This will access the two floats of memory that is shared between all threads in this block!
+    extern __shared__ float s_data[];
+    s_data[tid] = thread_max;
+    __syncthreads();
+
+    for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (tid < s) {
-            input[tid] = fmaxf(input[tid], input[tid + s]);
+            s_data[tid] = fmaxf(s_data[tid], s_data[tid + s]);
         }
         __syncthreads();
     }
+    float max_logit = s_data[0];
+    __syncthreads();
 
-    // TODO -- CONTINUE ON REDUCTION!
+    // ===== Step 2: Compute exp(z - max) and sum =====
+    // Again, we start with a grid-stride loop to find the sum of all the logits that this thread should consider on its own
+    float thread_sum = 0.0f;
+    for (int i = tid; i < num_classes; i += num_threads) {
+        thread_sum += expf(sample_input[i] - max_logit);
+    }
+    
+    // Now we do a parallel reduction to get total sum of exponentials
+    s_data[tid] = thread_sum;
+    __syncthreads();
 
-    // Step 2-5: Softmax computation
-    // Step 6: Gradient (need true_class_idx)
-    // Step 7: Write output
-    // Step 8: Compute and write loss
+    for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) {
+            s_data[tid] = s_data[tid] + s_data[tid + s];
+        }
+        __syncthreads();
+    }
+    float exp_sum = s_data[0];
+    
+    // ===== Step 3: Compute softmax probabilities and gradients =====
+    // Grid-stride loop in case the number of classes exceeds the number of threads
+    for (int i = tid; i < num_classes; i += num_threads) {
+        float prob = expf(sample_input[i] - max_logit) / exp_sum;
+        
+        // Compute gradient, which is simply the softmax value...
+        float gradient = prob;
+
+        // ...Except in the case of the true class!
+        if (i == true_class) {
+            gradient -= 1.0f;
+
+            // Compute loss:
+            float loss = -logf(prob);
+            losses[sample_idx] = loss;
+        }
+        sample_output[i] = gradient;
+    }
 }
 
 void launch_output_forward( const Matrix& d_input,
                             Matrix& d_output,
+                            int batch_size,
                             float* d_loss,
-                            size_t batch_size,
                             const int* d_true_class_indices) {
 
     // We will need to split this across blocks to run the softmax and cross-entropy loss
     // functions across each set of data for each example in the batch.
 
     // Input: the logits (z1 .... zn) produced by the final hidden layer (dense + ReLU).
-    // Output: the probabilites assigned to each class
+    // Output: the gradient (assigned to each class)
 
     size_t num_classes = d_input.cols;
+    ASSERT(d_input.rows == batch_size);
+    ASSERT(d_input.rows == d_output.rows && d_input.cols == d_output.cols);
 
     // Strategy: One block per sample
     // Each block handles one sample's softmax + gradient computation
     dim3 blocks(batch_size);
     dim3 threadsPerBlock(DEFAULT_THREADS_PER_BLOCK);  // Tune this - need enough threads for reduction
     
-    // Shared memory: store per-block max value and sum of exponentials
-    size_t shared_mem = 2 * sizeof(float);  // max_val, exp_sum
-    
+    // Shared memory: store per-block array to allow for parallel reductions to be done
+    size_t shared_mem = threadsPerBlock.x * sizeof(float);
+
     softmax_cross_entropy_kernel<<<blocks, threadsPerBlock, shared_mem>>>(
         d_input.data,
         d_output.data,
@@ -122,8 +169,6 @@ void launch_output_forward( const Matrix& d_input,
         num_classes,
         batch_size
     );
-
-    cudaDeviceSynchronize();
 }
 
 void launch_output_backward(    const Matrix& d_grad_output,
