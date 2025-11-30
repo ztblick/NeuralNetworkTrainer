@@ -1,16 +1,17 @@
 #include "activationKernels.cuh"
 #include "ReLULayer.h"
 #include <vector>
+#include <cuda_runtime.h>
 
 int run_neural_network() {
     // --- SETUP ---    
     // 1. Create the Stack
     std::vector<Layer*> network;
-    // network.push_back(new DenseLayer(784, 128)); // Input -> Hidden 1
+    // network.push_back(new DenseLayer(784, 128));             // Input -> Hidden 1
     network.push_back(new ReLULayer(BATCH_SIZE, 128));          // Activation
-    // network.push_back(new DenseLayer(128, 64));  // Hidden 1 -> Hidden 2
-    // network.push_back(new ReLULayer());          // Activation
-    // network.push_back(new DenseLayer(64, 10));   // Hidden 2 -> Logits
+    // network.push_back(new DenseLayer(128, 64));              // Hidden 1 -> Hidden 2
+    // network.push_back(new ReLULayer());                      // Activation
+    // network.push_back(new DenseLayer(64, 10));               // Hidden 2 -> Logits
     
     // The Loss Layer (Softmax + CrossEntropy) sits at the end
     // SoftmaxCrossEntropy* loss_layer = new SoftmaxCrossEntropy();
@@ -24,7 +25,10 @@ int run_neural_network() {
     // Tensor probs(64, 10);
 
     // // --- TRAINING LOOP ---
-    // for (int epoch = 0; epoch < NUM_EPOCHS; epoch++) {
+    for (int epoch = 0; epoch < NUM_EPOCHS; epoch++) {
+
+            // Initialize data for this particular training run
+            setup_batch_labels(BATCH_SIZE);
         
     //     // A. Forward Pass (The Chain Reaction)
     //     network[0]->forward(input_batch, h1_out);
@@ -52,8 +56,15 @@ int run_neural_network() {
     //     for (auto layer : network) {
     //         layer->update_weights(0.01f); // SGD
     //     }
-    // }
+    }
     return 0;
+}
+
+void setup_batch_labels(int batch_size) {
+    int h_labels[batch_size] = {0};  // TODO -- add MNIST labels for this test
+    int* d_labels;
+    cudaMalloc(&d_labels, batch_size * sizeof(int));
+    cudaMemcpy(d_labels, h_labels, batch_size * sizeof(int), cudaMemcpyHostToDevice);
 }
 
 
