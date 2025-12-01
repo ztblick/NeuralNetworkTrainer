@@ -13,18 +13,26 @@
   * These functions are called my the ReLU layer class -- when forward() or backward()
   * are called, these functions are called, which in turn call their respective GPU kernels.
   */
-void launch_relu_forward(const Matrix& d_input, Matrix& d_output, size_t batch_size);
+void launch_relu_forward(   const Matrix& d_input,
+                            Matrix& d_output,
+                            size_t batch_size);
 
-void launch_relu_backward(const Matrix& d_grad_output, const Matrix& d_output, Matrix& d_grad_input, size_t batch_size);
+void launch_relu_backward(  const Matrix& d_grad_output,
+                            const Matrix& d_output,
+                            Matrix& d_grad_input,
+                            size_t batch_size);
 
 /**
  * These functions are called by the loss layer class, which applies the softmax and cross-entropy loss
  * functions to create the probabilities of each classification and the intial gradient.
  */
-void launch_output_forward(const Matrix& d_input,
+void launch_output_forward( const Matrix& d_input,
                             Matrix& d_output,
                             int batch_size,
                             float* d_loss,
                             const int* d_true_class_indices);
-                            
-void launch_output_backward(const Matrix& d_grad_output, const Matrix& d_output, Matrix& d_grad_input, size_t batch_size);
+
+void launch_output_backward(const Matrix& d_grad_output,
+                            const Matrix& d_output,
+                            Matrix& d_grad_input,
+                            size_t batch_size);

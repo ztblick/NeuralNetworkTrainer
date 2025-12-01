@@ -2,7 +2,8 @@
 #include "MatrixKernels.cuh"
 
 __global__ void tiledMatrixMultiplyKernel(const float* A, const float* B, float* C,
-                                     int M, int N, int K) {
+                                          const float *bias,
+                                            int M, int N, int K) {
 
     // Allocate shared memory for tiles
     __shared__ float tileA[TILE_SIZE][TILE_SIZE];
@@ -53,19 +54,29 @@ __global__ void tiledMatrixMultiplyKernel(const float* A, const float* B, float*
         __syncthreads();
     }
 
-
-    // Finally, insert the sum to our resulting matrix!
+    // Finally, add the bias before writing the result into the output matrix
     if (row < M && col < N) {
-        C[row * N + col] = sum;
+        C[row * N + col] = sum + bias[col];
     }
 }
 
-// GPU Tiled wrapper function
-void tiledMatrixMultiplyGPU(const Matrix& A, const Matrix& B, Matrix& C) {
+/**
+ * d_input.data      A: [M, K] = [batch_size, input_features]
+ * weights.data      B: [K, N] = [input_features, output_features]
+ * d_output.data     C: [M, N] = [batch_size, output_features]
+ * bias.data      bias: [1, N] = [1, output_features]           
+**/
+void launch_dense_forward(  const Matrix& weights,
+                            const Matrix& d_input,
+                            Matrix& d_output,
+                            const Matrix& bias,
+                            size_t batch_size,
+                            size_t input_features,
+                            size_t output_features) {
 
-    int M = A.rows;
-    int K = B.rows;
-    int N = B.cols;
+    int M = batch_size;
+    int K = input_features;
+    int N = output_features;
 
     // Define block dimensions and grid dimensions                        
     dim3 threads(TILE_SIZE, TILE_SIZE);
@@ -75,14 +86,16 @@ void tiledMatrixMultiplyGPU(const Matrix& A, const Matrix& B, Matrix& C) {
                 (M + TILE_SIZE - 1) / TILE_SIZE);
     
     // Toggle these on and off to test performance
-    cudaMemPrefetchAsync(A.data, A.size * sizeof(float), 0, 0);
-    cudaMemPrefetchAsync(B.data, B.size * sizeof(float), 0, 0);
-    cudaMemPrefetchAsync(C.data, C.size * sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(weights.data, weights.size * sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(d_input.data, d_input.size * sizeof(float), 0, 0);
+    cudaMemPrefetchAsync(d_output.data, d_output.size * sizeof(float), 0, 0);
 
     // Launch our kernel!
-    tiledMatrixMultiplyKernel<<<blocks, threads>>>(A.data, B.data, C.data, M, N, K);
-
-    cudaDeviceSynchronize();
+    tiledMatrixMultiplyKernel<<<blocks, threads>>>(d_input.data,
+                                                    weights.data,
+                                                    d_output.data,
+                                                    bias.data,
+                                                    M, N, K);
 }
 
 // Naive GPU kernel

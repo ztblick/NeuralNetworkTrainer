@@ -1,6 +1,7 @@
 #include "activationKernels.cuh"
 #include "ReLULayer.h"
 #include "OutputLayer.h"
+#include "DenseLayer.h"
 #include <vector>
 #include <cuda_runtime.h>
 #include <cmath>
@@ -191,8 +192,93 @@ void test_output_layer() {
     cudaFree(d_true_classes);
 }
 
+void test_dense_layer() {
+    printf("\n=== Testing Dense Layer ===\n");
+    
+    // Small test: 2 samples, 3 input features, 2 output features
+    size_t batch_size = 2;
+    size_t input_features = 3;
+    size_t output_features = 2;
+    
+    // Create simple input: [[1,2,3], [4,5,6]]
+    float h_input[] = {
+        1.0f, 2.0f, 3.0f,
+        4.0f, 5.0f, 6.0f
+    };
+    
+    Matrix d_input(batch_size, input_features);
+    cudaMemcpy(d_input.data, h_input, 6 * sizeof(float), cudaMemcpyHostToDevice);
+    
+    // Create dense layer
+    DenseLayer dense(batch_size, input_features, output_features);
+    
+    // Manually set weights for predictable output
+    // weights = [[0.1, 0.2],
+    //            [0.3, 0.4],
+    //            [0.5, 0.6]]
+    float h_weights[] = {
+        0.1f, 0.2f,
+        0.3f, 0.4f,
+        0.5f, 0.6f
+    };
+    cudaMemcpy(dense.weights.data, h_weights, 6 * sizeof(float), cudaMemcpyHostToDevice);
+    
+    // Set bias = [0.1, 0.2]
+    float h_bias[] = {0.1f, 0.2f};
+    cudaMemcpy(dense.bias.data, h_bias, 2 * sizeof(float), cudaMemcpyHostToDevice);
+    
+    // Run forward pass
+    dense.forward(d_input);
+    cudaDeviceSynchronize();
+    
+    // Get output
+    float h_output[4];  // 2 samples * 2 features
+    cudaMemcpy(h_output, dense.d_output.data, 4 * sizeof(float), cudaMemcpyDeviceToHost);
+    
+    // Compute expected output manually
+    // Sample 0: [1,2,3] * [[0.1,0.2],[0.3,0.4],[0.5,0.6]] + [0.1,0.2]
+    //         = [1*0.1 + 2*0.3 + 3*0.5, 1*0.2 + 2*0.4 + 3*0.6] + [0.1,0.2]
+    //         = [0.1 + 0.6 + 1.5, 0.2 + 0.8 + 1.8] + [0.1,0.2]
+    //         = [2.2, 2.8] + [0.1,0.2]
+    //         = [2.3, 3.0]
+    
+    // Sample 1: [4,5,6] * weights + bias
+    //         = [4*0.1 + 5*0.3 + 6*0.5, 4*0.2 + 5*0.4 + 6*0.6] + [0.1,0.2]
+    //         = [0.4 + 1.5 + 3.0, 0.8 + 2.0 + 3.6] + [0.1,0.2]
+    //         = [4.9, 6.4] + [0.1,0.2]
+    //         = [5.0, 6.6]
+    
+    float expected[] = {2.3f, 3.0f, 5.0f, 6.6f};
+    
+    printf("Input:\n");
+    printf("  [%.1f, %.1f, %.1f]\n", h_input[0], h_input[1], h_input[2]);
+    printf("  [%.1f, %.1f, %.1f]\n", h_input[3], h_input[4], h_input[5]);
+    
+    printf("\nOutput:\n");
+    printf("  [%.1f, %.1f]  (expected: [%.1f, %.1f])\n", 
+           h_output[0], h_output[1], expected[0], expected[1]);
+    printf("  [%.1f, %.1f]  (expected: [%.1f, %.1f])\n",
+           h_output[2], h_output[3], expected[2], expected[3]);
+    
+    // Verify
+    float tolerance = 1e-4;
+    bool passed = true;
+    for (int i = 0; i < 4; i++) {
+        if (fabsf(h_output[i] - expected[i]) > tolerance) {
+            printf("ERROR: Output mismatch at index %d: got %.3f, expected %.3f\n", 
+                   i, h_output[i], expected[i]);
+            passed = false;
+        }
+    }
+    
+    if (passed) {
+        printf("✓ Dense layer test passed!\n");
+    }
+}
+
 int main() {
     // test_gemm();
     // test_relu();
-    test_output_layer();
+    // test_output_layer();
+    test_dense_layer();
 }
