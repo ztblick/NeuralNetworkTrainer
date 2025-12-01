@@ -98,43 +98,29 @@ void launch_dense_forward(  const Matrix& weights,
                                                     M, N, K);
 }
 
-// Naive GPU kernel
-__global__ void matrixMultiplyKernel(const float* A, const float* B, float* C,
-                                     int M, int N, int K) {
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
+/**
+    const Matrix& d_grad_output,  // [batch, output_features] - gradient from next layer
+    Matrix& d_grad_input,         // [batch, input_features] - OUTPUT: gradient to previous layer
+    Matrix& grad_weights,         // [input_features, output_features] - OUTPUT: weight gradients
+    Matrix& grad_bias,            // [1, output_features] - OUTPUT: bias gradients
+    const Matrix& weights,        // [input_features, output_features] - from forward pass
+    const Matrix& d_cached_input, // [batch, input_features] - from forward pass           
+**/
+void launch_dense_backward(
+    const Matrix& d_grad_output,  
+    Matrix& d_grad_input,         
+    Matrix& grad_weights,         
+    Matrix& grad_bias,           
+    const Matrix& weights,       
+    const Matrix& d_cached_input, 
+    size_t batch_size,
+    size_t input_features,
+    size_t output_features) {
 
-    if (!(row < M && col < N)) return;
+    // Define and launch kernel to calculate weight gradients
 
-    float sum = 0.0;
+    // Define and launch kernel to calculate gradient to previous layer
 
-    for (int idx = 0; idx < K; idx++)
-        sum += A[row * K + idx] * B[N * idx + col];
-    
-    C[row * N + col] = sum;
-}
+    // Define and launch kernel to calculate bias gradient
 
-// GPU wrapper function
-void matrixMultiplyGPU(const Matrix& A, const Matrix& B, Matrix& C) {
-
-    int M = A.rows;
-    int K = B.rows;
-    int N = B.cols;
-
-    // Define block dimensions and grid dimensions                        
-    dim3 threads(THREAD_X, THREAD_Y);
-
-    // Here, we ensure that we will not have too few blocks in our grid.
-    dim3 blocks((N + THREAD_X - 1) / THREAD_X,
-                (M + THREAD_Y - 1) / THREAD_Y);
-    
-    // Toggle these on and off to test performance
-    // cudaMemPrefetchAsync(d_A, M*K*sizeof(float), 0, 0);
-    // cudaMemPrefetchAsync(d_B, K*N*sizeof(float), 0, 0);
-    // cudaMemPrefetchAsync(d_C, M*N*sizeof(float), 0, 0);
-
-    // Launch our kernel!
-    matrixMultiplyKernel<<<blocks, threads>>>(A.data, B.data, C.data, M, N, K);
-
-    cudaDeviceSynchronize();
 }

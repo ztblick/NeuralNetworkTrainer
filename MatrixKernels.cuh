@@ -20,3 +20,14 @@ void launch_dense_forward(  const Matrix& weights,
                             size_t batch_size,
                             size_t input_features,
                             size_t output_features);
+
+void launch_dense_backward(
+    const Matrix& d_grad_output,  // [batch, output_features] - gradient from next layer
+    Matrix& d_grad_input,         // [batch, input_features] - OUTPUT: gradient to previous layer
+    Matrix& grad_weights,         // [input_features, output_features] - OUTPUT: weight gradients
+    Matrix& grad_bias,            // [1, output_features] - OUTPUT: bias gradients
+    const Matrix& weights,        // [input_features, output_features] - from forward pass
+    const Matrix& d_cached_input, // [batch, input_features] - from forward pass
+    size_t batch_size,
+    size_t input_features,
+    size_t output_features);

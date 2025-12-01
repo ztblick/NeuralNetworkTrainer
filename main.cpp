@@ -10,8 +10,7 @@
 
 int train_neural_network() {
     // --- SETUP ---    
-
-    // 0. Load MNIST data (TODO: implement this)
+    // 0. Load MNIST data
     MNISTDataset mnist("train-images.idx3-ubyte", "train-labels.idx1-ubyte");
 
     // 1. Create the Stack
@@ -31,6 +30,7 @@ int train_neural_network() {
     cudaMallocManaged(&d_batch_labels, BATCH_SIZE * sizeof(int));
 
     // // --- TRAINING LOOP ---
+    float learningRate = 0.01f;
     for (int epoch = 0; epoch < NUM_EPOCHS; epoch++) {
 
         int num_batches = mnist.num_samples / BATCH_SIZE;
@@ -51,7 +51,10 @@ int train_neural_network() {
             output_layer->forward_with_labels(*input, d_batch_labels);
             
             // TODO: Backward pass
-            // TODO: Weight updates
+            // Update weights
+            for (auto layer : network) {
+                layer->updateWeights(learningRate);
+            }
             
             // Print loss every 100 batches
             if (batch % 100 == 0) {

@@ -7,16 +7,20 @@ private:
     size_t batch_size;
     size_t input_features;
     size_t output_features;
+    Matrix d_cached_input;
     
 public:
     Matrix d_output;
     Matrix weights;
     Matrix bias;
+    Matrix grad_weights;  // ∂L/∂W
+    Matrix grad_bias;     // ∂L/∂b
 
     DenseLayer(size_t batch_size, size_t input_features, size_t output_features);
     // ~DenseLayer();
     
     void forward(const Matrix& d_input) override;
     void backward(const Matrix& d_grad_output, Matrix& d_grad_input) override;
+    void updateWeights(const float learningRate) override;
     const Matrix& getOutput() const override;
 };
