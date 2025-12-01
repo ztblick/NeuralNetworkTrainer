@@ -18,4 +18,5 @@ public:
     void backward(const Matrix& d_grad_output, Matrix& d_grad_input) override;
     const Matrix& getOutput() const override;
     float* getLoss();
+    float getAverageLoss();
 };

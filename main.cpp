@@ -2,74 +2,71 @@
 #include "ReLULayer.h"
 #include "OutputLayer.h"
 #include "DenseLayer.h"
+#include "mnistLoader.h"
 #include <vector>
 #include <cuda_runtime.h>
 #include <cmath>
+#include <cstdio>
 
-void setup_batch_labels(int batch_size) {
-    int h_labels[batch_size] = {0};  // TODO -- add MNIST labels for this test
-    int* d_labels;
-    cudaMalloc(&d_labels, batch_size * sizeof(int));
-    cudaMemcpy(d_labels, h_labels, batch_size * sizeof(int), cudaMemcpyHostToDevice);
-}
-
-int run_neural_network() {
+int train_neural_network() {
     // --- SETUP ---    
+
+    // 0. Load MNIST data (TODO: implement this)
+    MNISTDataset mnist("train-images.idx3-ubyte", "train-labels.idx1-ubyte");
+
     // 1. Create the Stack
     std::vector<Layer*> network;
-    // network.push_back(new DenseLayer(784, 128));             // Input -> Hidden 1
-    network.push_back(new ReLULayer(BATCH_SIZE, 128));          // Activation
-    // network.push_back(new DenseLayer(128, 64));              // Hidden 1 -> Hidden 2
-    // network.push_back(new ReLULayer());                      // Activation
-    // network.push_back(new DenseLayer(64, 10));               // Hidden 2 -> Logits
+    network.push_back(new DenseLayer(BATCH_SIZE, 784, 128));
+    network.push_back(new ReLULayer(BATCH_SIZE, 128));          
+    network.push_back(new DenseLayer(BATCH_SIZE, 128, 64));              
+    network.push_back(new ReLULayer(BATCH_SIZE, 64));                      
+    network.push_back(new DenseLayer(BATCH_SIZE, 64, NUM_CLASSES));               
     
     // The Loss Layer (Softmax + CrossEntropy) sits at the end
-    // SoftmaxCrossEntropy* loss_layer = new SoftmaxCrossEntropy();
+    OutputLayer* output_layer = new OutputLayer(BATCH_SIZE, NUM_CLASSES);
 
-    // // 2. Pre-allocate Tensors (Memory)
-    // // You create 'intermediate' tensors to hold data between layers
-    // Tensor input_batch(64, 784);
-    // Tensor h1_out(64, 128);
-    // Tensor h2_out(64, 64);
-    // Tensor final_logits(64, 10);
-    // Tensor probs(64, 10);
+    // // 2. Pre-allocate Memory
+    Matrix d_batch_images(BATCH_SIZE, 784);
+    int* d_batch_labels;
+    cudaMallocManaged(&d_batch_labels, BATCH_SIZE * sizeof(int));
 
     // // --- TRAINING LOOP ---
     for (int epoch = 0; epoch < NUM_EPOCHS; epoch++) {
 
-            // Initialize data for this particular training run
-            setup_batch_labels(BATCH_SIZE);
-        
-    //     // A. Forward Pass (The Chain Reaction)
-    //     network[0]->forward(input_batch, h1_out);
-    //     network[1]->forward(h1_out, h1_out); // ReLU applies in-place or to new buffer
-    //     network[2]->forward(h1_out, h2_out);
-    //     network[3]->forward(h2_out, h2_out);
-    //     network[4]->forward(h2_out, final_logits);
+        int num_batches = mnist.num_samples / BATCH_SIZE;
 
-    //     // B. Loss Calculation (Your new kernel)
-    //     loss_layer->set_targets(current_batch_targets);
-    //     loss_layer->forward(final_logits, probs);
-
-    //     // C. Backward Pass (Reverse Chain Reaction)
-    //     // Start with the loss layer
-    //     Tensor grad_flow(64, 10); 
-    //     loss_layer->backward(probs, grad_flow); // Gradients start here!
-
-    //     // Pass gradients back up the stack
-    //     network[4]->backward(grad_flow, h2_grad);
-    //     network[3]->backward(h2_grad, h2_grad); // ReLU backward
-    //     network[2]->backward(h2_grad, h1_grad);
-    //     ... and so on ...
-        
-    //     // D. Update Weights
-    //     for (auto layer : network) {
-    //         layer->update_weights(0.01f); // SGD
-    //     }
+        for (int batch = 0; batch < num_batches; batch++) {
+            
+            // Load batch data from MNIST
+            mnist.get_batch(batch, BATCH_SIZE, d_batch_images.data, d_batch_labels);
+            
+            // Forward pass
+            const Matrix* input = &d_batch_images;
+            for (auto layer : network) {
+                layer->forward(*input);
+                input = &layer->getOutput();
+            }
+            
+            // Loss calculation
+            output_layer->forward_with_labels(*input, d_batch_labels);
+            
+            // TODO: Backward pass
+            // TODO: Weight updates
+            
+            // Print loss every 100 batches
+            if (batch % 100 == 0) {
+                float avg_loss = output_layer->getAverageLoss();
+                printf("Epoch %d, Batch %d, Loss: %.4f\n", epoch, batch, avg_loss);
+            }
+        }
     }
+    // Cleanup
+    for (auto layer : network) delete layer;
+    delete output_layer;
+    cudaFree(d_batch_labels);
+    
     return 0;
 }
-
 
 void test_relu() {
     int size = 1e3;
@@ -276,9 +273,149 @@ void test_dense_layer() {
     }
 }
 
+void test_forward_pass_with_mnist() {
+    printf("\n=== Testing Forward Pass with MNIST ===\n");
+    
+    // Load MNIST
+    MNISTDataset mnist("train-images.idx3-ubyte", "train-labels.idx1-ubyte");
+    
+    // Small batch for testing
+    size_t batch_size = 4;
+    
+    // Create network
+    std::vector<Layer*> network;
+    network.push_back(new DenseLayer(batch_size, 784, 128));
+    network.push_back(new ReLULayer(batch_size, 128));
+    network.push_back(new DenseLayer(batch_size, 128, 64));
+    network.push_back(new ReLULayer(batch_size, 64));
+    network.push_back(new DenseLayer(batch_size, 64, 10));
+    
+    OutputLayer* output_layer = new OutputLayer(batch_size, 10);
+    
+    // Allocate batch memory
+    Matrix d_batch_images(batch_size, 784);
+    int* d_batch_labels;
+    cudaMallocManaged(&d_batch_labels, batch_size * sizeof(int));
+    
+    // Load first batch
+    mnist.get_batch(0, batch_size, d_batch_images.data, d_batch_labels);
+    cudaDeviceSynchronize();
+    
+    // Print what we loaded
+    printf("\n1. Data Loading Test:\n");
+    int h_labels[4];
+    cudaMemcpy(h_labels, d_batch_labels, 4 * sizeof(int), cudaMemcpyDeviceToHost);
+    printf("   Batch labels: [%d, %d, %d, %d]\n", 
+           h_labels[0], h_labels[1], h_labels[2], h_labels[3]);
+    
+    // Check a few pixel values
+    float h_pixels[10];
+    cudaMemcpy(h_pixels, d_batch_images.data, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+    printf("   First 10 pixels of image 0: ");
+    for (int i = 0; i < 10; i++) printf("%.2f ", h_pixels[i]);
+    printf("\n");
+    
+    // Forward pass
+    printf("\n2. Forward Pass:\n");
+    const Matrix* input = &d_batch_images;
+    for (size_t i = 0; i < network.size(); i++) {
+        network[i]->forward(*input);
+        input = &network[i]->getOutput();
+        printf("   After layer %ld: shape [%d, %d]\n", 
+               i, input->rows, input->cols);
+    }
+    
+    output_layer->forward_with_labels(*input, d_batch_labels);
+    printf("   After output layer: gradients computed\n");
+    
+    // Check output probabilities (before gradient subtraction, we need raw softmax)
+    // For this test, let's check the gradients instead
+    printf("\n3. Output Layer Validation:\n");
+    float h_gradients[40];  // 4 samples * 10 classes
+    cudaMemcpy(h_gradients, output_layer->getOutput().data, 
+               40 * sizeof(float), cudaMemcpyDeviceToHost);
+    
+    // For each sample, check:
+    // - Gradient at true class should be (prob - 1), so negative
+    // - Gradients at other classes should be prob, so positive
+    // - Sum of (gradients + one-hot) should be ~0 (numerical check)
+    for (int sample = 0; sample < 4; sample++) {
+        printf("   Sample %d (label=%d):\n", sample, h_labels[sample]);
+        printf("     Gradients: [");
+        
+        float sum_probs = 0.0f;
+        for (int c = 0; c < 10; c++) {
+            float grad = h_gradients[sample * 10 + c];
+            // Recover probability from gradient
+            float prob = (c == h_labels[sample]) ? grad + 1.0f : grad;
+            sum_probs += prob;
+            
+            if (c < 3 || c == h_labels[sample]) {
+                printf("%.3f%s", grad, c < 9 ? ", " : "");
+            } else if (c == 3) {
+                printf("..., ");
+            }
+        }
+        printf("]\n");
+        printf("     Sum of probabilities: %.4f (should be ~1.0)\n", sum_probs);
+        
+        // Check gradient at true class is negative
+        float true_class_grad = h_gradients[sample * 10 + h_labels[sample]];
+        if (true_class_grad >= 0.0f) {
+            printf("     WARNING: Gradient at true class should be negative!\n");
+        }
+    }
+    
+    // Check losses
+    printf("\n4. Loss Validation:\n");
+    float h_losses[4];
+    cudaMemcpy(h_losses, output_layer->getLoss(), 4 * sizeof(float), cudaMemcpyDeviceToHost);
+    
+    for (int i = 0; i < 4; i++) {
+        printf("   Sample %d loss: %.4f\n", i, h_losses[i]);
+        if (h_losses[i] < 0 || h_losses[i] > 10) {
+            printf("     WARNING: Loss seems unreasonable!\n");
+        }
+    }
+    
+    float avg_loss = output_layer->getAverageLoss();
+    printf("   Average loss: %.4f\n", avg_loss);
+    printf("   (Random guessing would give ~2.3 for 10 classes)\n");
+    
+    // Test with different batch to ensure different outputs
+    printf("\n5. Variety Test (different inputs → different outputs):\n");
+    mnist.get_batch(1, batch_size, d_batch_images.data, d_batch_labels);
+    
+    input = &d_batch_images;
+    for (auto layer : network) {
+        layer->forward(*input);
+        input = &layer->getOutput();
+    }
+    output_layer->forward_with_labels(*input, d_batch_labels);
+    
+    float avg_loss2 = output_layer->getAverageLoss();
+    printf("   Batch 0 avg loss: %.4f\n", avg_loss);
+    printf("   Batch 1 avg loss: %.4f\n", avg_loss2);
+    
+    if (fabsf(avg_loss - avg_loss2) < 1e-5) {
+        printf("   WARNING: Losses are identical - network might not be using input!\n");
+    } else {
+        printf("   ✓ Different inputs produce different outputs\n");
+    }
+    
+    printf("\n✓ Forward pass test complete!\n");
+    
+    // Cleanup
+    for (auto layer : network) delete layer;
+    delete output_layer;
+    cudaFree(d_batch_labels);
+}
+
 int main() {
     // test_gemm();
     // test_relu();
     // test_output_layer();
-    test_dense_layer();
+    // test_dense_layer();
+    test_forward_pass_with_mnist();
+    // train_neural_network();
 }

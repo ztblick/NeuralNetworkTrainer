@@ -17,12 +17,13 @@ Once I have a basic model working, I will turn my attention to optimization on m
 
 **Phase 3: Forward-Passing Netword**
 - [x] Abstract Layer class
-- [ ] Dense Layers
-- [ ] Passing data through all layers from input to output
+- [x] Dense Layers
+- [x] Passing data through all layers from input to output
+- [x] Integrate MNIST dataset
 
 **Phase 4: Backpropagation**
 
-**Phase 5: Training and Testing with MNIST Data**
+**Phase 5: Training and Testing**
 
 | Test: 1024x1024 \* 1024x1024 |  |  |  |
 | :---- | :---- | :---- | :---- |

@@ -4,5 +4,6 @@
 
 #define NUM_EPOCHS  10
 #define BATCH_SIZE  64
+#define NUM_CLASSES 10
 #define DEFAULT_THREADS_PER_BLOCK   256
 

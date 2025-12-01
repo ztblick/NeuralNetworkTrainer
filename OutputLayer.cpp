@@ -2,6 +2,9 @@
 #include "OutputLayer.h"
 #include "activationKernels.cuh"
 #include <cuda_runtime.h>
+#include <thrust/device_ptr.h>
+#include <thrust/reduce.h>
+#include <thrust/system/cuda/execution_policy.h>
 
 OutputLayer::OutputLayer(size_t batch_size, size_t num_classes) 
     : batch_size(batch_size),
@@ -34,4 +37,16 @@ const Matrix& OutputLayer::getOutput() const {
 
 float* OutputLayer::getLoss() {
     return d_loss;
+}
+
+float OutputLayer::getAverageLoss() {
+    float h_losses[batch_size];
+    cudaMemcpy(h_losses, d_loss, batch_size * sizeof(float), 
+               cudaMemcpyDeviceToHost);
+    
+    float sum = 0.0f;
+    for (size_t i = 0; i < batch_size; i++) {
+        sum += h_losses[i];
+    }
+    return sum / batch_size;
 }
