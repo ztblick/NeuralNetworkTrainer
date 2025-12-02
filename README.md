@@ -22,8 +22,13 @@ Once I have a basic model working, I will turn my attention to optimization on m
 - [x] Integrate MNIST dataset
 
 **Phase 4: Backpropagation**
+- [x] Dense layer backward pass
+- [x] ReLU Layer backward pass
+- [x] Pass gradients between layers
 
 **Phase 5: Training and Testing**
+- [x] Develop overall training loop: compile and run!
+- [ ] Debug and confirm learning
 
 | Test: 1024x1024 \* 1024x1024 |  |  |  |
 | :---- | :---- | :---- | :---- |
