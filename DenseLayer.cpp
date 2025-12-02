@@ -20,11 +20,13 @@ DenseLayer::DenseLayer(size_t batch_size, size_t input_features, size_t output_f
       output_features(output_features),
       weights(input_features, output_features),
       bias(1, output_features), 
-      d_output(batch_size, output_features),
       grad_weights(input_features, output_features),
       grad_bias(1, output_features),              
       d_cached_input(batch_size, input_features) {
     
+      d_output = Matrix(batch_size, output_features);
+      d_grad_input = Matrix(batch_size, input_features);
+
     // Initialize weights with He initialization
     initialize_he(weights.data, input_features * output_features, input_features);
     
@@ -41,7 +43,7 @@ void DenseLayer::forward(const Matrix& d_input) {
     launch_dense_forward(weights, d_input, d_output, bias, batch_size, input_features, output_features);
 }
 
-void DenseLayer::backward(const Matrix& d_grad_output, Matrix& d_grad_input) {
+void DenseLayer::backward(const Matrix& d_grad_output) {
     launch_dense_backward(d_grad_output,
                          d_grad_input,
                          grad_weights,      
@@ -54,7 +56,8 @@ void DenseLayer::backward(const Matrix& d_grad_output, Matrix& d_grad_input) {
 }
 
 void DenseLayer::updateWeights(const float learningRate) {
-
+    launch_weight_update(weights, grad_weights, learningRate);
+    launch_weight_update(bias, grad_bias, learningRate);
 }
 
 const Matrix& DenseLayer::getOutput() const {

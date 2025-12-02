@@ -8,9 +8,9 @@
 
 OutputLayer::OutputLayer(size_t batch_size, size_t num_classes) 
     : batch_size(batch_size),
-      num_classes(num_classes),
-      d_output(batch_size, num_classes) {
+      num_classes(num_classes) {
 
+    d_output = Matrix(batch_size, num_classes);
     cudaMallocManaged(&d_loss, batch_size * sizeof(float));
 }
 
@@ -27,9 +27,14 @@ void OutputLayer::forward_with_labels(const Matrix& d_input, const int* d_true_c
     launch_output_forward(d_input, d_output, batch_size, d_loss, d_true_classes);
 }
 
-void OutputLayer::backward(const Matrix& d_grad_output, Matrix& d_grad_input) {
-    launch_output_backward(d_grad_output, d_output, d_grad_input, batch_size);
+void OutputLayer::backward(const Matrix& d_grad_output) {
+    // Nothing needs to be done!
 }
+
+void OutputLayer::updateWeights(const float learningRate) {
+
+}
+
 
 const Matrix& OutputLayer::getOutput() const {
     return d_output;  // Return reference to member
@@ -50,3 +55,4 @@ float OutputLayer::getAverageLoss() {
     }
     return sum / batch_size;
 }
+

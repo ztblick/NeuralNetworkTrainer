@@ -20,7 +20,8 @@ void launch_relu_forward(   const Matrix& d_input,
 void launch_relu_backward(  const Matrix& d_grad_output,
                             const Matrix& d_output,
                             Matrix& d_grad_input,
-                            size_t batch_size);
+                            size_t batch_size,
+                            size_t features);
 
 /**
  * These functions are called by the loss layer class, which applies the softmax and cross-entropy loss
@@ -32,7 +33,8 @@ void launch_output_forward( const Matrix& d_input,
                             float* d_loss,
                             const int* d_true_class_indices);
 
-void launch_output_backward(const Matrix& d_grad_output,
-                            const Matrix& d_output,
-                            Matrix& d_grad_input,
-                            size_t batch_size);
+void launch_output_backward(
+  const Matrix& d_grad_output,
+  const Matrix& d_output,
+  Matrix& d_grad_input,
+  size_t batch_size);

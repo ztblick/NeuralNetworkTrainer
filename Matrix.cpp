@@ -5,6 +5,8 @@
 #include <cuda_runtime.h>
 #include "timer.cuh"
 
+Matrix::Matrix() : rows(0), cols(0), size(0), data(nullptr) {}
+
 Matrix::Matrix(int rows, int cols)
         : rows(rows), cols(cols) {
         ASSERT(rows > 0 && cols > 0);

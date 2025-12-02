@@ -31,3 +31,9 @@ void launch_dense_backward(
     size_t batch_size,
     size_t input_features,
     size_t output_features);
+
+
+void launch_weight_update(
+    Matrix& weights, 
+    const Matrix& gradients, 
+    float learning_rate);

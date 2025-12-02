@@ -33,6 +33,7 @@ class Matrix {
         float* data;
         int rows, cols, size;
         
+        Matrix();
         Matrix(int rows, int cols);
         ~Matrix();
 };

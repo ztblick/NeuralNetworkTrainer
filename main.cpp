@@ -50,7 +50,14 @@ int train_neural_network() {
             // Loss calculation
             output_layer->forward_with_labels(*input, d_batch_labels);
             
-            // TODO: Backward pass
+            // Backward pass
+            const Matrix* grad_input = &output_layer->getOutput();
+
+            for (int i = network.size() - 1; i >= 0; i--) {
+                network[i]->backward(*grad_input);
+                grad_input = &network[i]->getGradInput();
+            }
+
             // Update weights
             for (auto layer : network) {
                 layer->updateWeights(learningRate);
@@ -419,6 +426,6 @@ int main() {
     // test_relu();
     // test_output_layer();
     // test_dense_layer();
-    test_forward_pass_with_mnist();
-    // train_neural_network();
+    // test_forward_pass_with_mnist();
+    train_neural_network();
 }

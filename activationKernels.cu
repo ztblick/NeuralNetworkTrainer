@@ -38,18 +38,17 @@ __global__ void relu_backward_kernel(   const float* grad_output,
 void launch_relu_backward(  const Matrix& d_grad_output,
                             const Matrix& d_output,
                             Matrix& d_grad_input,
-                            size_t batch_size) {
+                            size_t batch_size,
+                            size_t features) {
 
-    size_t total = d_grad_input.rows * batch_size;  // TODO this may need to be transposed
-    int threads = 256;
+    size_t total = features * batch_size;
+    int threads = DEFAULT_THREADS_PER_BLOCK;
     int blocks = (total + threads - 1) / threads;
 
     relu_backward_kernel<<<blocks, threads>>>(  d_grad_output.data,
                                                 d_output.data, 
                                                 d_grad_input.data,
                                                 total);
-
-    cudaDeviceSynchronize();
 }
 
 __global__ void softmax_cross_entropy_kernel(   const float* input,      // [batch_size, num_classes]
@@ -169,13 +168,4 @@ void launch_output_forward( const Matrix& d_input,
         num_classes,
         batch_size
     );
-}
-
-void launch_output_backward(    const Matrix& d_grad_output,
-                                const Matrix& d_output,
-                                Matrix& d_grad_input,
-                                size_t batch_size) {
-
-    // Input: the probabilites assigned to each class (as well as the correct class for each test case).
-    // Output: the gradient vector to send to the next layer during the backward pass.
 }
