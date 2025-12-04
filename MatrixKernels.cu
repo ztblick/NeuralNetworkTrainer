@@ -119,9 +119,9 @@ __global__ void tiledMatMulTranspose(const float* A, const float* B, float* C,
         if (transposeA) {
             // A is stored as [K, M], we want A^T which is [M, K]
             // row is in [0, M), we're reading from column 'row' of original A
-            int aRow = tile * TILE_SIZE + ty;  // Position in K dimension
-            if (aRow < K && row < M) {
-                tileA[ty][tx] = A[aRow * M + row];  // Read down column of A
+            int aCol = tile * TILE_SIZE + tx;  // Position in K dimension
+            if (aCol < K && row < M) {
+                tileA[ty][tx] = A[aCol * M + row];  // Read down column of A
             } else {
                 tileA[ty][tx] = 0.0f;
             }
@@ -137,11 +137,9 @@ __global__ void tiledMatMulTranspose(const float* A, const float* B, float* C,
         
         // Load tile from B
         if (transposeB) {
-            // B is stored as [N, K], we want B^T which is [K, N]
-            // col is in [0, N), we're reading from column 'col' of original B
-            int bCol = tile * TILE_SIZE + tx;  // Position in K dimension
-            if (bCol < K && col < N) {
-                tileB[ty][tx] = B[col * K + bCol];  // Read down column of B
+            int bRow = tile * TILE_SIZE + ty;  // Position in K dimension
+            if (bRow < K && col < N) {
+                tileB[ty][tx] = B[col * K + bRow];  // Read down column of B
             } else {
                 tileB[ty][tx] = 0.0f;
             }
@@ -266,6 +264,18 @@ void launch_dense_backward(
         false,  // transposeA
         true);  // transposeB
     
+#if DEBUG
+    cudaDeviceSynchronize();  // Force completion
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("CUDA ERROR in grad_input matmul: %s\n", cudaGetErrorString(err));
+    }
+
+    // Check if anything was written
+    printf("  After grad_input matmul: d_grad_input[0] = %.6f\n", d_grad_input.data[0]);
+#endif
+
+
     // Launch kernel to calculate bias gradients 
     // 3. grad_bias = sum(grad_output for each batch (a.k.a. axis=0)) =====
     //  Input: [batch, output_features]
@@ -307,6 +317,30 @@ void launch_weight_update(Matrix& weights, const Matrix& gradients, float learni
         weights.data,
         gradients.data,
         learning_rate,
+        total
+    );
+}
+
+
+__global__ void scale_matrix(float* data, float scale, size_t size) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < size) {
+        data[idx] *= scale;
+    }
+}
+
+
+void launch_scale_matrix(
+    Matrix& grad,
+    float scale) {
+
+    size_t total = grad.rows * grad.cols;
+    int threads = DEFAULT_THREADS_PER_BLOCK;
+    int blocks = (total + threads - 1) / threads;
+    
+    scale_matrix<<<blocks, threads>>>(
+        grad.data,
+        scale,
         total
     );
 }

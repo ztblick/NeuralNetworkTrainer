@@ -18,7 +18,19 @@ void ReLULayer::forward(const Matrix& d_input) {
 }
 
 void ReLULayer::backward(const Matrix& d_grad_output) {
+
+#if DEBUG
+    printf("ReLU Layer::backward called\n");
+    printf("  grad_output[0] = %.6f\n", d_grad_output.data[0]);
+    printf("  d_output[0] = %.6f\n", d_output.data[0]);
+#endif
+
     launch_relu_backward(d_grad_output, d_output, d_grad_input, batch_size, features);
+
+#if DEBUG
+    printf("  grad_input[0] = %.6f\n", d_grad_input.data[0]);
+#endif
+
 }
 
 void ReLULayer::updateWeights(const float learningRate) {

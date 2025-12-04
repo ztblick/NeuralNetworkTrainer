@@ -8,6 +8,58 @@
 #include <cmath>
 #include <cstdio>
 
+void print_mnist_sample(const float* image, int label) {
+    printf("Label: %d\n", label);
+    for (int row = 0; row < 28; row++) {
+        for (int col = 0; col < 28; col++) {
+            float pixel = image[row * 28 + col];
+            if (pixel > 0.5) printf("██");
+            else if (pixel > 0.2) printf("▓▓");
+            else if (pixel > 0.1) printf("░░");
+            else printf("  ");
+        }
+        printf("\n");
+    }
+}
+
+// After output_layer->forward_with_labels(*input, d_batch_labels);
+void print_probabilities(int* d_batch_labels, OutputLayer* output_layer) {
+    int h_label;
+    cudaMemcpy(&h_label, d_batch_labels, sizeof(int), cudaMemcpyDeviceToHost);
+
+    float h_gradients[10];
+    cudaMemcpy(h_gradients, output_layer->d_output.data, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+
+    printf("\n=== Sample 0 Debug ===\n");
+    printf("True label: %d\n", h_label);
+    printf("Class | Gradient | Recovered Prob\n");
+    printf("------|----------|---------------\n");
+
+    float prob_sum = 0.0f;
+    float prob_true_class = 0.0f;
+
+    for (int i = 0; i < 10; i++) {
+        // Gradients are: prob - 1 for true class, prob for others
+        float prob = (i == h_label) ? (h_gradients[i] + 1.0f) : h_gradients[i];
+        prob_sum += prob;
+        
+        if (i == h_label) {
+            prob_true_class = prob;
+            printf("  %d * | %8.4f | %8.4f  <- TRUE CLASS\n", i, h_gradients[i], prob);
+        } else {
+            printf("  %d   | %8.4f | %8.4f\n", i, h_gradients[i], prob);
+        }
+    }
+
+    printf("\nProbability sum: %.6f (should be ~1.0)\n", prob_sum);
+    printf("Prob of true class: %.6f\n", prob_true_class);
+    printf("Expected loss: %.6f (= -log(%.6f))\n", -logf(prob_true_class), prob_true_class);
+
+    float h_actual_loss;
+    cudaMemcpy(&h_actual_loss, output_layer->getLoss(), sizeof(float), cudaMemcpyDeviceToHost);
+printf("Actual loss: %.6f\n", h_actual_loss);
+}
+
 int train_neural_network() {
     // --- SETUP ---    
     // 0. Load MNIST data
@@ -30,7 +82,6 @@ int train_neural_network() {
     cudaMallocManaged(&d_batch_labels, BATCH_SIZE * sizeof(int));
 
     // // --- TRAINING LOOP ---
-    float learningRate = 0.01f;
     for (int epoch = 0; epoch < NUM_EPOCHS; epoch++) {
 
         int num_batches = mnist.num_samples / BATCH_SIZE;
@@ -49,7 +100,7 @@ int train_neural_network() {
             
             // Loss calculation
             output_layer->forward_with_labels(*input, d_batch_labels);
-            
+
             // Backward pass
             const Matrix* grad_input = &output_layer->getOutput();
 
@@ -60,13 +111,27 @@ int train_neural_network() {
 
             // Update weights
             for (auto layer : network) {
-                layer->updateWeights(learningRate);
+                layer->updateWeights(LEARNING_RATE);
             }
             
-            // Print loss every 100 batches
-            if (batch % 100 == 0) {
+            // Print loss every PRINT_FREQUENCY batches
+            if (batch % PRINT_FREQUENCY == 0) {
                 float avg_loss = output_layer->getAverageLoss();
                 printf("Epoch %d, Batch %d, Loss: %.4f\n", epoch, batch, avg_loss);
+
+                DenseLayer* first_dense = dynamic_cast<DenseLayer*>(network[0]);
+                
+                // Check gradient statistics
+                float grad_sum = 0.0f;
+                float grad_max = 0.0f;
+                for (int i = 0; i < first_dense->grad_weights.rows * first_dense->grad_weights.cols; i++) {
+                    float g = fabsf(first_dense->grad_weights.data[i]);
+                    grad_sum += g;
+                    if (g > grad_max) grad_max = g;
+                }
+                float grad_avg = grad_sum / (first_dense->grad_weights.rows * first_dense->grad_weights.cols);
+                
+                printf("  Gradient stats: avg=%.6f, max=%.6f\n", grad_avg, grad_max);
             }
         }
     }

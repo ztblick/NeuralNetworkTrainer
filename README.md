@@ -28,7 +28,8 @@ Once I have a basic model working, I will turn my attention to optimization on m
 
 **Phase 5: Training and Testing**
 - [x] Develop overall training loop: compile and run!
-- [ ] Debug and confirm learning
+- [x] Debug and confirm learning
+- [ ] Improve learning and minimize loss function
 
 | Test: 1024x1024 \* 1024x1024 |  |  |  |
 | :---- | :---- | :---- | :---- |

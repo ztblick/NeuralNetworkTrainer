@@ -44,6 +44,12 @@ void DenseLayer::forward(const Matrix& d_input) {
 }
 
 void DenseLayer::backward(const Matrix& d_grad_output) {
+
+#if DEBUG
+    printf("DenseLayer::backward called\n");
+    printf("  grad_output[0] = %.6f\n", d_grad_output.data[0]);
+#endif
+
     launch_dense_backward(d_grad_output,
                          d_grad_input,
                          grad_weights,      
@@ -53,6 +59,12 @@ void DenseLayer::backward(const Matrix& d_grad_output) {
                          batch_size,
                          input_features,
                          output_features);
+
+#if DEBUG
+    printf("  grad_weights[0] = %.6f\n", grad_weights.data[0]);
+    printf("  grad_input[0] = %.6f\n", d_grad_input.data[0]);
+#endif
+    
 }
 
 void DenseLayer::updateWeights(const float learningRate) {

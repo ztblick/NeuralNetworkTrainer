@@ -6,7 +6,7 @@ DEBUG_FLAGS = -g -G -O0 -DDEBUG -arch=sm_$(GPU_ARCH) -std=c++11
 
 TARGET = test_nn
 
-SRCS = activationKernels.cu DenseLayer.cpp main.cpp Matrix.cpp MatrixKernels.cu mnistLoader.cpp OutputLayer.cpp ReLULayer.cpp 
+SRCS = activationKernels.cu DenseLayer.cpp main.cpp MatrixKernels.cu mnistLoader.cpp OutputLayer.cpp ReLULayer.cpp 
 HEADERS = activationKernels.cuh config.h debug.h DenseLayer.h Layer.h Matrix.h MatrixKernels.cuh mnistLoader.h OutputLayer.h ReLULayer.h timer.cuh
 
 all: $(TARGET)

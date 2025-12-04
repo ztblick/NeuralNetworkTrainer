@@ -8,13 +8,13 @@ private:
     size_t input_features;
     size_t output_features;
     Matrix d_cached_input;
-    Matrix grad_weights;  // ∂L/∂W
-    Matrix grad_bias;     // ∂L/∂b
+
 
 public:
     Matrix weights;
     Matrix bias;
-
+    Matrix grad_weights;  // ∂L/∂W
+    Matrix grad_bias;     // ∂L/∂b
 
     DenseLayer(size_t batch_size, size_t input_features, size_t output_features);
     // ~DenseLayer();

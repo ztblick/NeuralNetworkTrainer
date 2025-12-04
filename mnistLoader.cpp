@@ -8,6 +8,11 @@ uint32_t swap_endian(uint32_t val) {
            ((val << 24) & 0xff000000);
 }
 
+void read_and_validate(void* to, size_t size, size_t n_items, FILE* stream) {
+    size_t n = fread(to, size, n_items, stream);
+    ASSERT(n == n_items);
+}
+
 MNISTDataset::MNISTDataset(const char* image_file, const char* label_file) {
     // Read images
     FILE* img_fp = fopen(image_file, "rb");
@@ -17,10 +22,11 @@ MNISTDataset::MNISTDataset(const char* image_file, const char* label_file) {
     }
     
     uint32_t magic, num_images, rows, cols;
-    fread(&magic, 4, 1, img_fp);
-    fread(&num_images, 4, 1, img_fp);
-    fread(&rows, 4, 1, img_fp);
-    fread(&cols, 4, 1, img_fp);
+    read_and_validate(&magic, 4, 1, img_fp);
+
+    read_and_validate(&num_images, 4, 1, img_fp);
+    read_and_validate(&rows, 4, 1, img_fp);
+    read_and_validate(&cols, 4, 1, img_fp);
     
     // Swap from big-endian
     magic = swap_endian(magic);
@@ -35,7 +41,7 @@ MNISTDataset::MNISTDataset(const char* image_file, const char* label_file) {
     
     // Allocate and read image data
     uint8_t* raw_images = new uint8_t[num_samples * image_size];
-    fread(raw_images, 1, num_samples * image_size, img_fp);
+    read_and_validate(raw_images, 1, num_samples * image_size, img_fp);
     fclose(img_fp);
     
     // Convert to float and normalize to [0, 1]
@@ -53,14 +59,14 @@ MNISTDataset::MNISTDataset(const char* image_file, const char* label_file) {
     }
     
     uint32_t num_labels;
-    fread(&magic, 4, 1, lbl_fp);
-    fread(&num_labels, 4, 1, lbl_fp);
+    read_and_validate(&magic, 4, 1, lbl_fp);
+    read_and_validate(&num_labels, 4, 1, lbl_fp);
     
     magic = swap_endian(magic);
     num_labels = swap_endian(num_labels);
     
     h_labels = new uint8_t[num_labels];
-    fread(h_labels, 1, num_labels, lbl_fp);
+    read_and_validate(h_labels, 1, num_labels, lbl_fp);
     fclose(lbl_fp);
     
     printf("Loaded %zu samples\n", num_samples);
