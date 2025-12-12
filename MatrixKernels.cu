@@ -263,18 +263,6 @@ void launch_dense_backward(
         M2, N2, K2,
         false,  // transposeA
         true);  // transposeB
-    
-#if DEBUG
-    cudaDeviceSynchronize();  // Force completion
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) {
-        printf("CUDA ERROR in grad_input matmul: %s\n", cudaGetErrorString(err));
-    }
-
-    // Check if anything was written
-    printf("  After grad_input matmul: d_grad_input[0] = %.6f\n", d_grad_input.data[0]);
-#endif
-
 
     // Launch kernel to calculate bias gradients 
     // 3. grad_bias = sum(grad_output for each batch (a.k.a. axis=0)) =====

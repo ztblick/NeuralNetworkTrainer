@@ -37,3 +37,7 @@ void launch_weight_update(
     Matrix& weights, 
     const Matrix& gradients, 
     float learning_rate);
+
+void launch_scale_matrix(
+    Matrix& grad,
+    float scale);

@@ -15,8 +15,13 @@ public:
     Matrix bias;
     Matrix grad_weights;  // ∂L/∂W
     Matrix grad_bias;     // ∂L/∂b
+    int layerCount;
 
-    DenseLayer(size_t batch_size, size_t input_features, size_t output_features);
+    DenseLayer(
+        size_t batch_size,
+        size_t input_features,
+        size_t output_features,
+        int layerCount);
     // ~DenseLayer();
     
     void forward(const Matrix& d_input) override;
