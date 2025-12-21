@@ -2,18 +2,18 @@
 #pragma once
 #include "debug.h"
 
-#define DEBUG           1
+#define DEBUG           0
 
 #if DEBUG
-#define NUM_EPOCHS      5
+#define NUM_EPOCHS      1
 #define BATCH_SIZE      64
-#elif
-#define NUM_EPOCHS      10
+#else
+#define NUM_EPOCHS      100
 #define BATCH_SIZE      64
 #endif
 
 
-#define LEARNING_RATE   0.01
+#define LEARNING_RATE   0.05
 
 #define NUM_CLASSES     10
 

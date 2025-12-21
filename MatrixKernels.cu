@@ -235,6 +235,7 @@ void launch_dense_backward(
     
     dim3 blocks1((N1 + TILE_SIZE - 1) / TILE_SIZE,
                  (M1 + TILE_SIZE - 1) / TILE_SIZE);
+
     
     tiledMatMulTranspose<<<blocks1, threads>>>(
         d_cached_input.data,
@@ -256,6 +257,7 @@ void launch_dense_backward(
     dim3 blocks2((N2 + TILE_SIZE - 1) / TILE_SIZE,
                  (M2 + TILE_SIZE - 1) / TILE_SIZE);
     
+
     tiledMatMulTranspose<<<blocks2, threads>>>(
         d_grad_output.data,
         weights.data,
