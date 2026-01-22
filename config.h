@@ -8,7 +8,7 @@
 #define NUM_EPOCHS      1
 #define BATCH_SIZE      64
 #else
-#define NUM_EPOCHS      100
+#define NUM_EPOCHS      30
 #define BATCH_SIZE      64
 #endif
 

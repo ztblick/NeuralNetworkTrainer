@@ -29,11 +29,13 @@ int train_neural_network() {
 
     // 1. Create the Stack
     std::vector<Layer*> network;
-    network.push_back(new DenseLayer(BATCH_SIZE, 784, 128, 0));
+    network.push_back(new DenseLayer(BATCH_SIZE, 784, 256, 0));
+    network.push_back(new ReLULayer(BATCH_SIZE, 256));          
+    network.push_back(new DenseLayer(BATCH_SIZE, 256, 128, 1)); 
     network.push_back(new ReLULayer(BATCH_SIZE, 128));          
-    network.push_back(new DenseLayer(BATCH_SIZE, 128, 64, 1));              
+    network.push_back(new DenseLayer(BATCH_SIZE, 128, 64, 2));              
     network.push_back(new ReLULayer(BATCH_SIZE, 64));                      
-    network.push_back(new DenseLayer(BATCH_SIZE, 64, NUM_CLASSES, 2));               
+    network.push_back(new DenseLayer(BATCH_SIZE, 64, NUM_CLASSES, 3));               
     
     // The Loss Layer (Softmax + CrossEntropy) sits at the end
     OutputLayer* output_layer = new OutputLayer(BATCH_SIZE, NUM_CLASSES);
